@@ -218,6 +218,7 @@ python init_quiz.py --abort         # stop the active quiz
 python init_quiz.py --force         # start a new one over an active one
 python preview.py --filled 6        # design preview with placeholder images
 python simulate.py                  # offline run through every round, with assertions
+python stats.py                     # statistics of a finished quiz, from the archive
 ```
 
 For a test run it is convenient to shorten the rounds:
@@ -239,7 +240,7 @@ counting on your own.
 | `.env` | bot token |
 | `state.json` | the active quiz; `active: false` means there is nothing to do |
 | `runtime/offset.json` | the `getUpdates` offset, kept separately so it survives the end of a quiz |
-| `runtime/archive/<quiz_id>.json` | results of a finished quiz, including winner names |
+| `runtime/archive/<quiz_id>.json` | results of a finished quiz: every submission with its timestamp and score, the winners, voter counts. Read it with `stats.py` |
 | `media/` | generated charts and downloaded winner images |
 
 ---

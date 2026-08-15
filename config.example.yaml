@@ -105,8 +105,11 @@ render:
     caption_text: "#ffffff"
 
 # ─── Шаблони текстів ───────────────────────────────────────────────────
-# Доступні поля: {title} {hashtag} {round} {total} {cell} {x_value}
-#                {y_value} {left} {left_min} {winners} {author} {score}
+# Доступні поля: {title} {hashtag} {round} {total} {cell} {x_value} {y_value}
+#                {left} {left_min} {entries} {entries_human} {winners} {author} {score}
+# {entries} — число заявок, {entries_human} — «поки жодної заявки» / «7 заявок».
+# Лічильник оновлюється разом із відліком, тобто відстає не більше
+# ніж на caption_update_*.
 # Розмітка — HTML (<b>, <i>, <a href>).
 templates:
   round_caption: |
@@ -117,7 +120,7 @@ templates:
     Кидайте свою картинку в коментарі під цим постом.
     Голосуйте 👍 / 👎 за чужі заявки — переможець займе клітинку в чарті.
 
-    ⏳ Залишилось {left}
+    ⏳ Залишилось {left}  ·  🖼 {entries_human}
 
     {hashtag}
 

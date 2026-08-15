@@ -70,11 +70,17 @@ class FakeBot:
         return dest
 
 
-def make_entries(round_index: int, count: int = 4) -> dict:
-    """count заявок; чим більший індекс — тим більше плюсів, останній ловить мінуси."""
+def make_entries(round_index: int, started_ts: float, count: int = 4) -> dict:
+    """count заявок; чим більший індекс — тим більше плюсів, останній ловить мінуси.
+
+    Час подачі навмисно спадний: заявка з індексом 0 надіслана найпізніше, а
+    найвищий скор дістається найранішій. Тобто пізні заявки програють — саме
+    той звʼязок, який має вміти виявляти stats.py.
+    """
     entries = {}
     for i in range(count):
         message_id = 7000 + round_index * 100 + i
+        submitted_at = started_ts + (count - i) * 300
         reactions = {}
         for voter in VOTERS[: i + 1]:
             reactions[str(voter)] = ["👍"]
@@ -95,7 +101,7 @@ def make_entries(round_index: int, count: int = 4) -> dict:
             "author": display_name(user),
             "username": username_of(user),
             "file_id": f"fake-{round_index * 4 + i}",
-            "date": 1_700_000_000 + message_id,
+            "date": submitted_at,
             "reactions": reactions,
         }
     return entries
@@ -133,6 +139,7 @@ def main() -> int:
         "cell_order": order,
         "round_index": 0,
         "round": None,
+        "rounds": [],
         "winners": [],
     }
 
@@ -157,7 +164,7 @@ def main() -> int:
     print("\nРаунди:")
     for index in range(len(order)):
         rnd = state["round"]
-        rnd["entries"] = make_entries(index)
+        rnd["entries"] = make_entries(index, from_iso(rnd["started_at"]).timestamp())
         rnd["ends_at"] = to_iso(now_utc() - timedelta(seconds=1))
 
         # На третьому раунді ламаємо публікацію наступного поста: наступний тік
@@ -205,7 +212,7 @@ def main() -> int:
         )
 
     # Скор: 4 заявки, остання має 4 плюси і 2 мінуси → перемагає третя з 3 плюсами
-    sample = make_entries(0)
+    sample = make_entries(0, 0.0)
     scores = {e["author"]: score_entry(e, cfg["voting"]) for e in sample.values()}
     failures += not check(
         "різниця позитив−негатив рахується правильно",
@@ -229,6 +236,49 @@ def main() -> int:
     final_media = bot.sent[-1]["path"]
     failures += not check("фінальний чарт відрендерено", final_media.exists(),
                           f"{final_media.name}, {final_media.stat().st_size / 1024:.0f} КБ")
+
+    # --- Дані для аналізу формату ---
+    print("\nПідсумки раундів в архіві:")
+    recorded = archived.get("rounds") if archive_path.exists() else None
+    failures += not check(
+        "записано підсумок кожного раунду",
+        bool(recorded) and len(recorded) == len(order),
+        f"{len(recorded or [])}/{len(order)}",
+    )
+    if recorded:
+        flat = [e for r in recorded for e in r["entries"]]
+        failures += not check(
+            "збережено всі заявки, не лише переможців",
+            len(flat) == sum(r["entries_total"] for r in recorded) and len(flat) > len(order),
+            f"заявок {len(flat)}",
+        )
+        failures += not check(
+            "у кожної заявки є час подачі й скор",
+            all(e.get("seconds_after_start") is not None and "score" in e for e in flat),
+        )
+        failures += not check(
+            "особи тих, хто голосував, не зберігаються",
+            all("reactions" not in e for e in flat) and all(isinstance(e["voters"], int) for e in flat),
+        )
+        failures += not check(
+            "ранги проставлені від першого місця",
+            all([e["rank"] for e in r["entries"]] == list(range(1, len(r["entries"]) + 1)) for r in recorded),
+        )
+
+        # У simulate пізні заявки навмисно слабші — аналіз має це побачити
+        from stats import spearman
+        pooled = []
+        for r in recorded:
+            rho = spearman([e["seconds_after_start"] for e in r["entries"]],
+                           [e["score"] for e in r["entries"]])
+            if rho is not None:
+                pooled.append(rho)
+        avg = sum(pooled) / len(pooled) if pooled else 0
+        failures += not check(
+            "аналіз бачить, що пізні заявки програють",
+            avg < -0.3,
+            f"ρ = {avg:+.2f}",
+        )
 
     # --- Приватність у публічних текстах ---
     print("\nПриватність:")

@@ -49,6 +49,13 @@ def human_left(delta: timedelta) -> str:
     return f"{head} {rest} {plural_uk(rest, 'хвилина', 'хвилини', 'хвилин')}"
 
 
+def human_entries(count: int) -> str:
+    """«поки жодної заявки» / «1 заявка» / «7 заявок» — для підпису під постом."""
+    if not count:
+        return "поки жодної заявки"
+    return f"{count} {plural_uk(count, 'заявка', 'заявки', 'заявок')}"
+
+
 def display_name(user: dict) -> str:
     """Ім'я автора для підпису в чарті: ім'я та прізвище.
 

@@ -247,6 +247,7 @@ def main() -> int:
         "cell_order": order,
         "round_index": 0,
         "round": None,
+        "rounds": [],      # підсумки закритих раундів — для архіву й аналізу
         "winners": [],
     }
 

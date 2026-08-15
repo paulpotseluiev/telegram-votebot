@@ -14,7 +14,7 @@ from . import state as st
 from .api import TelegramError
 from .render import build_round_media
 from .updates import drain, pick_winner
-from .util import from_iso, human_left, now_utc, to_iso
+from .util import from_iso, human_entries, human_left, now_utc, to_iso
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +57,10 @@ def build_caption(state: dict, left: timedelta, rnd: dict | None = None) -> str:
         y_value=quiz["y_axis"]["values"][row],
         left=human_left(left),
         left_min=max(0, int(left.total_seconds() // 60)),
+        # Лічильник оновлюється разом із відліком, тобто відстає від
+        # реальності не більше ніж на caption_update_*
+        entries=len(rnd.get("entries") or {}),
+        entries_human=human_entries(len(rnd.get("entries") or {})),
     ).strip()
 
 
@@ -111,6 +115,7 @@ def validate_templates(cfg: dict) -> None:
         "title": "x", "hashtag": "#x", "round": 1, "total": 9, "cell": "x + y",
         "x_value": "x", "y_value": "y", "left": "1 хвилина", "left_min": 1,
         "winners": "x", "author": "x", "score": 0,
+        "entries": 0, "entries_human": "поки жодної заявки",
     }
     for name, template in cfg["templates"].items():
         try:
@@ -240,9 +245,61 @@ def close_round(bot, state: dict) -> None:
     else:
         log.info("Заявок немає або не набрано мінімум — клітинка лишається порожньою")
 
+    _record_round(state, rnd, ranked, winner)
     rnd["closed"] = True
     st.save(state)
     _advance(bot, state)
+
+
+def _record_round(state: dict, rnd: dict, ranked: list, winner: dict | None) -> None:
+    """Складає підсумок раунду в state["rounds"].
+
+    Без цього дані про заявки зникають назавжди: відкриття наступного раунду
+    затирає rnd["entries"], і в архіві лишаються самі переможці. Тоді питання
+    на кшталт «чи програють пізні заявки» доводиться відновлювати по логах
+    systemd, які не вічні.
+
+    Особи тих, хто голосував, свідомо НЕ зберігаємо — лише кількість і розклад
+    по емодзі. Для аналізу формату цього досить, а досьє на читачів нам не треба.
+    """
+    started_ts = from_iso(rnd["started_at"]).timestamp()
+    voters: set[str] = set()
+    entries = []
+
+    for rank, entry in enumerate(ranked, 1):
+        reactions = entry.get("reactions") or {}
+        voters.update(reactions)
+        emoji_counts: dict[str, int] = {}
+        for emojis in reactions.values():
+            for emoji in emojis:
+                emoji_counts[emoji] = emoji_counts.get(emoji, 0) + 1
+
+        submitted = entry.get("date", 0)
+        entries.append({
+            "rank": rank,
+            "message_id": entry["message_id"],
+            "author": entry["author"],
+            "author_id": entry["author_id"],
+            "username": entry.get("username"),
+            "submitted_at": submitted,
+            "seconds_after_start": max(0, int(submitted - started_ts)) if submitted else None,
+            "score": entry.get("score", 0),
+            "voters": len(reactions),
+            "emoji": emoji_counts,
+        })
+
+    state.setdefault("rounds", []).append({
+        "round": rnd["index"] + 1,
+        "cell": rnd["cell"],
+        "started_at": rnd["started_at"],
+        "ends_at": rnd["ends_at"],
+        "closed_at": to_iso(now_utc()),
+        "post_message_id": rnd.get("post_message_id"),
+        "entries_total": len(ranked),
+        "unique_voters": len(voters),
+        "winner_message_id": winner["message_id"] if winner else None,
+        "entries": entries,
+    })
 
 
 def _advance(bot, state: dict) -> None:
