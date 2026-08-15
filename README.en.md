@@ -58,7 +58,7 @@ the queue for 24 hours, so even a multi-hour scheduler outage loses no votes.
 ### 1. Code and dependencies
 
 ```bash
-git clone https://github.com/USER/votebot.git && cd votebot
+git clone https://github.com/paulpotseluiev/telegram-votebot.git && cd telegram-votebot
 python -m venv .venv
 ```
 
@@ -194,7 +194,7 @@ crontab -e
 ```
 
 ```
-* * * * * cd /opt/votebot && /opt/votebot/.venv/bin/python tick.py >> /opt/votebot/runtime/tick.log 2>&1
+* * * * * cd /path/to/votebot && /path/to/votebot/.venv/bin/python tick.py >> /path/to/votebot/runtime/tick.log 2>&1
 ```
 
 > The `runtime/` directory must exist **before** the first run: the shell sets up the `>>`

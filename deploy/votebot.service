@@ -15,8 +15,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=CHANGEME_USER
-WorkingDirectory=/opt/votebot
-ExecStart=/opt/votebot/.venv/bin/python tick.py
+WorkingDirectory=/path/to/votebot
+ExecStart=/path/to/votebot/.venv/bin/python tick.py
 
 # Якщо мережа підвисне, тік не має тримати юніт вічно: systemd не запустить
 # наступний, поки активний попередній.

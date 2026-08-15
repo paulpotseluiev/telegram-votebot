@@ -3,7 +3,7 @@
 Ідемпотентна і дешева: якщо активної вікторини немає, тік лише зливає чергу
 апдейтів і виходить. Ставити раз на хвилину:
 
-    * * * * * cd /opt/votebot && /opt/votebot/.venv/bin/python tick.py >> runtime/tick.log 2>&1
+    * * * * * cd /path/to/votebot && /path/to/votebot/.venv/bin/python tick.py >> runtime/tick.log 2>&1
 """
 import logging
 import sys
