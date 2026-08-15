@@ -1,0 +1,19 @@
+# Секрети й локальні налаштування
+.env
+config.yaml
+
+# Стан вікторини та робочі дані
+state.json
+state.json.tmp
+runtime/
+media/
+sandbox/
+
+# Локальні допоміжні файли, не частина проєкту
+shutdown.bat
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

@@ -1,0 +1,23 @@
+# Шаблон юніта. Підстав свої шляхи й користувача, потім:
+#
+#   sudo cp deploy/votebot.service deploy/votebot.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now votebot.timer
+#
+# Type=oneshot: кожен тік — окремий короткий процес, який читає state.json
+# і вирішує, що робити. Довгоживучої служби тут немає й не треба.
+
+[Unit]
+Description=votebot tick — вікторина-чарт у Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=CHANGEME_USER
+WorkingDirectory=/opt/votebot
+ExecStart=/opt/votebot/.venv/bin/python tick.py
+
+# Якщо мережа підвисне, тік не має тримати юніт вічно: systemd не запустить
+# наступний, поки активний попередній.
+TimeoutStartSec=300

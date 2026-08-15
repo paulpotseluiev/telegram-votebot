@@ -1,0 +1,15 @@
+# У репозиторії текст зберігається з LF; на Windows у робочій копії git може
+# віддавати CRLF — для Python, YAML і Markdown це не має значення.
+* text=auto
+
+# А ось цим CRLF протипоказаний навіть у робочій копії: systemd спотикається
+# на `\r` у значеннях директив, а bash — на `#!/bin/bash\r`.
+*.service text eol=lf
+*.timer   text eol=lf
+*.sh      text eol=lf
+
+# Бінарники git не чіпає
+*.gif binary
+*.png binary
+*.jpg binary
+*.mp4 binary
